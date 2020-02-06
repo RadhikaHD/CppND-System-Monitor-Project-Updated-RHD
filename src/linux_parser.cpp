@@ -1,5 +1,6 @@
 #include <dirent.h>
 #include <unistd.h>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -66,10 +67,28 @@ vector<int> LinuxParser::Pids() {
   return pids;
 }
 
-// TODO: Read and return the system memory utilization
-float LinuxParser::MemoryUtilization() { return 0.0; }
+float LinuxParser::MemoryUtilization() {
+  // Total used memory = MemTotal - MemFree
+  float memory = 0.0;
+  float MemTotal, MemFree;
 
-// TODO: Read and return the system uptime
+  string line, key, value;
+  std::ifstream stream(kProcDirectory + kMeminfoFilename);
+
+  if (stream.is_open()) {
+    while (std::getline(stream, line)) {
+      std::istringstream linestream(line);
+      while (linestream >> key >> value) {
+        if (key == "MemTotal:") MemTotal = std::stof(value);
+        if (key == "MemFree:") MemFree = std::stof(value);
+      }
+    }
+  }
+
+  memory = ((MemTotal - MemFree) / MemTotal);
+  return memory;
+}
+
 long LinuxParser::UpTime() {
   std::string uptimes, line;
   long uptime;
