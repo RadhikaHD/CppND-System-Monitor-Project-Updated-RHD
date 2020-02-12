@@ -20,13 +20,21 @@ System::System() {
   this->kernel_ = LinuxParser::Kernel();
 }
 
-// TODO: Return the system's CPU
 Processor& System::Cpu() { return cpu_; }
 
 // TODO: Return a container composed of the system's processes
-vector<Process>& System::Processes() { return processes_; }
+vector<Process>& System::Processes() {
+  vector<int> pids = LinuxParser::Pids();
+  // do the following for all pids
+  for (auto i : pids) {
+    // create process (call constructor using pid??)
+    Process process(i);
+    // push it back in the vector processes_
+    processes_.push_back(process);
+  }
+  return processes_;
+}
 
-// TODO: Return the system's kernel identifier (string)
 std::string System::Kernel() { return kernel_; }
 
 float System::MemoryUtilization() {
