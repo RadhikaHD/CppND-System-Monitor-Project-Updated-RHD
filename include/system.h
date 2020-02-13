@@ -19,7 +19,6 @@ class System {
   std::string Kernel();               // TODO: See src/system.cpp
   std::string OperatingSystem();      // TODO: See src/system.cpp
 
-  
  private:
   Processor cpu_ = {};
   std::vector<Process> processes_ = {};
