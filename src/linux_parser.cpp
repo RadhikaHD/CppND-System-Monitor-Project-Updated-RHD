@@ -183,13 +183,12 @@ string LinuxParser::Command(int pid) {
   return command;
 }
 
-
-string LinuxParser::Ram(int pid) { 
-   std::string ram;
-   int ramvalue;
+string LinuxParser::Ram(int pid) {
+  std::string ram;
+  int ramvalue;
 
   string line, key, value;
-  std::ifstream stream(kProcDirectory + std::to_string(pid)+ kStatusFilename);
+  std::ifstream stream(kProcDirectory + std::to_string(pid) + kStatusFilename);
 
   if (stream.is_open()) {
     while (std::getline(stream, line)) {
@@ -199,20 +198,47 @@ string LinuxParser::Ram(int pid) {
       }
     }
   }
-  ramvalue = std::stoi(ram)/1000;
+  ramvalue = std::stoi(ram) / 1000;
   ram = std::to_string(ramvalue);
-  return ram; }
+  return ram;
+}
 
-// TODO: Read and return the user ID associated with a process
-// REMOVE: [[maybe_unused]] once you define the function
-string LinuxParser::Uid(int pid[[maybe_unused]]) { return string(); }
+string LinuxParser::Uid(int pid) {
+  std::string line, key, value, uid;
+  std::ifstream stream(kProcDirectory + std::to_string(pid) + kStatusFilename);
 
-// TODO: Read and return the user associated with a process
-// REMOVE: [[maybe_unused]] once you define the function
-string LinuxParser::User(int pid[[maybe_unused]]) { return string(); }
+  if (stream.is_open()) {
+    while (std::getline(stream, line)) {
+      std::istringstream linestream(line);
+      while (linestream >> key >> value) {
+        if (key == "Uid:") uid = value;
+      }
+    }
+  }
+  return uid;
+}
+
+string LinuxParser::User(int pid) {
+  std::string username, uidstr, extra, line, uid;
+  uid = LinuxParser::Uid(pid);
+
+  std::ifstream filestream(kPasswordPath);
+  if (filestream.is_open()) {
+    while (std::getline(filestream, line)) {
+      std::replace(line.begin(), line.end(), ':', ' ');
+      std::istringstream linestream(line);
+      while (linestream >> username >> extra >> uidstr) {
+        if (uidstr == uid) {
+          return username;
+        }
+      }
+    }
+  }
+  return username;
+}
 
 long LinuxParser::UpTime(int pid) {
-  std::string line, value,starttimestr;
+  std::string line, value, starttimestr;
   long starttime, uptime;
   std::ifstream stream(kProcDirectory + std::to_string(pid) + kStatFilename);
   if (stream.is_open()) {
@@ -223,6 +249,61 @@ long LinuxParser::UpTime(int pid) {
     starttime = std::stol(starttimestr);
     starttime = starttime / sysconf(_SC_CLK_TCK);
   }
-  uptime = LinuxParser::UpTime()-starttime;
+  uptime = LinuxParser::UpTime() - starttime;
   return uptime;
+}
+
+float LinuxParser::CpuUtilization(int pid) {
+  /*
+  /proc/[PID]/stat
+#14 utime - CPU time spent in user code, measured in clock ticks
+#15 stime - CPU time spent in kernel code, measured in clock ticks
+#16 cutime - Waited-for children's CPU time spent in user code (in clock ticks)
+#17 cstime - Waited-for children's CPU time spent in kernel code (in clock
+ticks)
+#22 starttime - Time when the process started, measured in clock ticks
+  */
+
+  std::string line, utimestr, stimestr, cutimestr, cstimestr, starttimestr,
+      buffer;
+  long utime, stime, cutime, cstime, starttime, total_time;
+  float seconds, cpu_usage;
+  std::ifstream stream(kProcDirectory + std::to_string(pid) + kStatFilename);
+  if (stream.is_open()) {
+    std::getline(stream, line);
+    std::istringstream linestream(line);
+    // get the 14, 15, 16, 17, 22 value from file
+    for (int i = 0; i < 22; i++) {
+      if (i == 13)
+        linestream >> utimestr;
+      else if (i == 14)
+        linestream >> stimestr;
+      else if (i == 15)
+        linestream >> cutimestr;
+      else if (i == 16)
+        linestream >> cstimestr;
+      else if (i == 21)
+        linestream >> starttimestr;
+      else
+        linestream >> buffer;
+    }
+  }
+  utime = std::stol(utimestr);
+
+  stime = std::stol(stimestr);
+
+  cutime = std::stol(cutimestr);
+
+  cstime = std::stol(cstimestr);
+  starttime = std::stol(starttimestr);
+
+  total_time = utime + stime;
+
+  total_time = total_time + cutime + cstime;
+
+  seconds = LinuxParser::UpTime() - (starttime / sysconf(_SC_CLK_TCK));
+
+  cpu_usage = (total_time / sysconf(_SC_CLK_TCK)) / seconds;
+
+  return cpu_usage;
 }
