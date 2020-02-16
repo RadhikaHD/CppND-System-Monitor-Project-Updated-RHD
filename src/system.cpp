@@ -18,20 +18,19 @@ using std::vector;
 System::System() {
   this->OSname_ = LinuxParser::OperatingSystem();
   this->kernel_ = LinuxParser::Kernel();
+
+  vector<int> pids = LinuxParser::Pids();
+
+  for (auto i : pids) {
+    Process process(i);
+    processes_.push_back(process);
+  }
 }
 
 Processor& System::Cpu() { return cpu_; }
 
-// TODO: Return a container composed of the system's processes
 vector<Process>& System::Processes() {
-  vector<int> pids = LinuxParser::Pids();
-  // do the following for all pids
-  for (auto i : pids) {
-    // create process (call constructor using pid??)
-    Process process(i);
-    // push it back in the vector processes_
-    processes_.push_back(process);
-  }
+  std::sort(processes_.begin(), processes_.end());
   return processes_;
 }
 
@@ -45,7 +44,6 @@ float System::MemoryUtilization() {
 
 std::string System::OperatingSystem() { return OSname_; }
 
-// TODO: Return the number of processes actively running on the system
 int System::RunningProcesses() { return LinuxParser::RunningProcesses(); }
 
 int System::TotalProcesses() { return LinuxParser::TotalProcesses(); }
